@@ -10,6 +10,7 @@
 	"extensions": [
 		"ms-vscode.cpptools",
 		"ms-vscode.cmake-tools",
+		"TobiasTao.vscode-md",
 		"jebbs.plantum",
 		"coenraads.bracket-pair-colorizer",
 		"eamodio.gitlens",		
