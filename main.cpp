@@ -2,8 +2,10 @@
 #include <cstdlib>
 
 #include <SoapySDR/Device.hpp>
+#include <SoapySDR/Logger.hpp>
 #include <SoapySDR/Types.hpp>
 #include <SoapySDR/Formats.hpp>
+#include <SoapySDR/Errors.h>
 
 #include <string> // std::string
 #include <vector> // std::vector<...>
@@ -11,22 +13,35 @@
 
 #include <iostream>
 
+constexpr auto kMinSampleRate = 30.72e6;
+constexpr auto kSizeBuff = 1024;
+#define LOG_EXP(WHAT) SoapySDR::logf(SOAPY_SDR_FATAL, "*************** Exception: %s %s", WHAT, "***************\n");
+
 int main()
+try
 {
-    std::cout << "Hello Raspberry & SoapySDR\n";
+    SoapySDR::logf(SOAPY_SDR_INFO, "*************** Raspberry & SoapySDR & Kraken ***************\n");
 
     // 0. enumerate devices (list all devices' information)
     SoapySDR::KwargsList results = SoapySDR::Device::enumerate();
     SoapySDR::Kwargs::iterator it;
 
-    for (int i = 0; i < results.size(); ++i)
+    printf("\n");
+
+    for (size_t i = 0; i < results.size(); ++i)
     {
-        printf("Found device #%d: ", i);
+        SoapySDR::logf(SOAPY_SDR_INFO, "Found device #%d: ", i);
         for (it = results[i].begin(); it != results[i].end(); ++it)
         {
-            printf("%s = %s\n", it->first.c_str(), it->second.c_str());
+            SoapySDR::logf(SOAPY_SDR_INFO, "%s = %s", it->first.c_str(), it->second.c_str());
         }
         printf("\n");
+    }
+
+    if (results.empty())
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "Device isn't found, no work to do");
+        return EXIT_FAILURE;
     }
 
     // 1. create device instance
@@ -41,7 +56,7 @@ int main()
 
     if (sdr == NULL)
     {
-        fprintf(stderr, "SoapySDR::Device::make failed\n");
+        SoapySDR::logf(SOAPY_SDR_FATAL, "SoapySDR::Device::make failed\n");
         return EXIT_FAILURE;
     }
 
@@ -50,27 +65,50 @@ int main()
 
     //	2.1 antennas
     str_list = sdr->listAntennas(SOAPY_SDR_RX, 0);
-    printf("Rx antennas: ");
-    for (int i = 0; i < str_list.size(); ++i)
-        printf("%s,", str_list[i].c_str());
-    printf("\n");
+    auto info_buf_str = std::string("Rx antennas: ");
+    for (size_t i = 0; i < str_list.size(); ++i)
+    {
+        info_buf_str += str_list[i] + ",";
+    }
+    SoapySDR::logf(SOAPY_SDR_INFO, "%s", info_buf_str.c_str());
 
     //	2.2 gains
     str_list = sdr->listGains(SOAPY_SDR_RX, 0);
-    printf("Rx Gains: ");
-    for (int i = 0; i < str_list.size(); ++i)
-        printf("%s, ", str_list[i].c_str());
-    printf("\n");
+    info_buf_str = "Rx Gains: ";
+    for (size_t i = 0; i < str_list.size(); ++i)
+    {
+        info_buf_str += str_list[i] + ", ";
+    }
+    SoapySDR::logf(SOAPY_SDR_INFO, "%s", info_buf_str.c_str());
 
     //	2.3. ranges(frequency ranges)
     SoapySDR::RangeList ranges = sdr->getFrequencyRange(SOAPY_SDR_RX, 0);
-    printf("Rx freq ranges: ");
-    for (int i = 0; i < ranges.size(); ++i)
-        printf("[%g Hz -> %g Hz], ", ranges[i].minimum(), ranges[i].maximum());
-    printf("\n");
+    info_buf_str = "Rx freq ranges: ";
+    for (size_t i = 0; i < ranges.size(); ++i)
+    {
+        info_buf_str += "[" + std::to_string(ranges[i].minimum()) + " Hz -> " + std::to_string(ranges[i].maximum()) + " Hz], ";
+    }
+    SoapySDR::logf(SOAPY_SDR_INFO, "%s", info_buf_str.c_str());
 
     // 3. apply settings
-    sdr->setSampleRate(SOAPY_SDR_RX, 0, 10e6);
+    try
+    {
+        auto sample_rate_range = sdr->getSampleRateRange(SOAPY_SDR_RX, 0);
+        for (const auto &range : sample_rate_range)
+        {
+            SoapySDR::logf(SOAPY_SDR_INFO, "minimum: %f maximum: %f step: %f", range.minimum(), range.maximum(), range.step());
+        }
+
+        auto minSampleRate = sample_rate_range[0].maximum() < kMinSampleRate ? sample_rate_range[0].maximum() : kMinSampleRate;
+
+        SoapySDR::logf(SOAPY_SDR_INFO, "Setting sample rate to %f", minSampleRate);
+
+        sdr->setSampleRate(SOAPY_SDR_RX, 0, minSampleRate);
+    }
+    catch (const std::runtime_error &error)
+    {
+        SoapySDR::logf(SOAPY_SDR_ERROR, ": %s", error.what());
+    }
 
     sdr->setFrequency(SOAPY_SDR_RX, 0, 433e6);
 
@@ -78,23 +116,35 @@ int main()
     SoapySDR::Stream *rx_stream = sdr->setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32);
     if (rx_stream == NULL)
     {
-        fprintf(stderr, "Failed\n");
+        SoapySDR::logf(SOAPY_SDR_FATAL, "Setup Stream failed");
         SoapySDR::Device::unmake(sdr);
         return EXIT_FAILURE;
     }
     sdr->activateStream(rx_stream, 0, 0, 0);
 
     // 5. create a re-usable buffer for rx samples
-    std::complex<float> buff[1024];
+    std::complex<float> data_buff[kSizeBuff] = {0};
 
     // 6. receive some samples
     for (int i = 0; i < 10; ++i)
     {
-        void *buffs[] = {buff};
+        void *buffs[] = {data_buff};
         int flags;
         long long time_ns;
-        int ret = sdr->readStream(rx_stream, buffs, 1024, flags, time_ns, 1e5);
-        printf("ret = %d, flags = %d, time_ns = %lld\n", ret, flags, time_ns);
+        int retCode = sdr->readStream(rx_stream, buffs, kSizeBuff, flags, time_ns);
+        SoapySDR::logf(SOAPY_SDR_INFO, "retCode = %d, flags = %d, time_ns = %lld", retCode, flags, time_ns);
+
+        if (retCode < 0)
+        {
+            SoapySDR::logf(SOAPY_SDR_ERROR, "%s", SoapySDR_errToStr(retCode));
+            continue;
+        }
+
+        int numVal = -1;
+        for (const auto &val : data_buff)
+        {
+            SoapySDR::logf(SOAPY_SDR_INFO, "index[%d] (%f,%f)", ++numVal, val.real(), val.imag());
+        }
     }
 
     // 7. shutdown the stream
@@ -103,7 +153,11 @@ int main()
 
     // 8. cleanup device handle
     SoapySDR::Device::unmake(sdr);
-    printf("Done\n");    
+    SoapySDR::logf(SOAPY_SDR_INFO, "Done");
 
     return EXIT_SUCCESS;
+}
+catch (const std::runtime_error &error)
+{
+    LOG_EXP(error.what())
 }
