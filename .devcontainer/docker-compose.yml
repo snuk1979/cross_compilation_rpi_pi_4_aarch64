@@ -1,0 +1,39 @@
+version: '3.3'
+services:
+    # Needs equivalent value with localEnv:KRAKEN_SDR_DOCKER_SERVICE
+    kraken_sdr_build:
+        environment:                 
+            - CCACHE_COMPILERCHECK=content
+            - CCACHE_DIR=/ccache
+            - CCACHE_MAX_SIZE=25G            
+            - DISPLAY=${DISPLAY}
+            - DEV_DIR=${DEV_DIR}
+            - KRAKEN_SDR_DEV_DIR=${KRAKEN_SDR_DEV_DIR} 
+            - KRAKEN_SDR_DIR=${KRAKEN_SDR_DIR}
+            - RASPBIAN_ROOTFS=${RASPBIAN_ROOTFS}    
+        volumes:
+            - ${KRAKEN_SDR_DEV_DIR}/ccache/current/ccache:/ccache:cached            
+            - ${KRAKEN_SDR_DEV_DIR}:${KRAKEN_SDR_DEV_DIR}:cached
+            - ${DEV_DIR}/.:${DEV_DIR}/.:cached
+            - ${HOME_DIR}:${HOME_DIR}:cached            
+            - /tmp/.X11-unix:/tmp/.X11-unix                     
+            - ${KRAKEN_SDR_DIR}/kraken_sdr_commandhistory:/commandhistory            
+            - unique-vol-name-kraken:/home/$USER/.vscode-server/extensions
+            - unique-vol-name-kraken-insiders:/home/$USER/.vscode-server-insiders/extensions
+        network_mode: host
+        pid: host
+        tty: true 
+       # build: .
+        build:
+         context: .
+        #  args:         
+        #   FIX_PATH: ${DEV_DIR}        
+         shm_size: '2gb'
+        shm_size: '2gb'
+        # Needs equivalent value with localEnv:KRAKEN_SDR_DOCKER_SERVICE
+        container_name: kraken_sdr_build
+        command:  /bin/sh -c "while sleep 1000; do :; done"
+
+volumes:
+  unique-vol-name-kraken:
+  unique-vol-name-kraken-insiders:  

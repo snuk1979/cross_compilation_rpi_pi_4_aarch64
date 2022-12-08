@@ -1,0 +1,20 @@
+{
+	"name": "${localEnv:KRAKEN_SDR_DOCKER_SERVICE}",
+	"dockerComposeFile": [
+		"docker-compose.yml"
+	],	
+	"service": "${localEnv:KRAKEN_SDR_DOCKER_SERVICE}",
+	"shutdownAction": "none",
+	"remoteUser": "${localEnv:DOCKER_USER}",	
+	"workspaceFolder": "${localEnv:KRAKEN_SDR_DEV_DIR}",
+	"extensions": [
+		"ms-vscode.cpptools",
+		"ms-vscode.cmake-tools",
+		"jebbs.plantum",
+		"coenraads.bracket-pair-colorizer",
+		"eamodio.gitlens",		
+		"sleistner.vscode-fileutils",
+		"ms-python.python",
+		"grapecity.gc-excelviewer"
+	]
+}

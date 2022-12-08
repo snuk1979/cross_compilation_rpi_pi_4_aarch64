@@ -1,0 +1,6 @@
+[
+    {
+        "name": "Raspberry Pi 4 (aarch64)",
+        "toolchainFile": "${workspaceFolder}/cmake/aarch64-rpi4-linux-gnu.cmake"
+    }
+]
