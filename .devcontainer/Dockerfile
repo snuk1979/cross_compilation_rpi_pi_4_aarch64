@@ -2,6 +2,7 @@ FROM ubuntu:20.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
+# Add a user called `develop`
 RUN useradd -ms /bin/bash develop
 
 ENV TZ=Europe/Kiev
