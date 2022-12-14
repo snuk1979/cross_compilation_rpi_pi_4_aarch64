@@ -2,13 +2,16 @@
 
 #include <vector>
 #include <atomic>
+#include <csignal>
 
 #include <SoapySDR/Device.hpp>
-#include <SoapySDR/Logger.hpp>
 #include <SoapySDR/Formats.hpp>
 #include <SoapySDR/Errors.h>
 
-#define LOG_FUNC() SoapySDR::logf(SOAPY_SDR_INFO, "%s", __PRETTY_FUNCTION__)
+#include "Utility.h"
+#include "DeviceStreamRtl.h"
+
+extern sig_atomic_t streamLoopDone;
 
 namespace device_manager
 {
@@ -16,28 +19,28 @@ namespace device_manager
 
     struct DeviceData
     {
-        DeviceData(std::shared_ptr<SoapySDR::Device> device, const SoapySDR::Kwargs &args) : mDevice(std::move(device)), mArgs(args), mStopStreamFlag(false)
+        DeviceData(std::shared_ptr<SoapySDR::Device> device, const SoapySDR::Kwargs &args) : mDevice(std::move(device)), mArgs(args), mStream()
         {
         }
 
-        DeviceData(DeviceData &&rh) : mDevice(std::move(rh.mDevice)), mArgs(std::move(rh.mArgs)), mStopStreamFlag(std::move(rh.mStopStreamFlag))
+        DeviceData(DeviceData &&rh) : mDevice(std::move(rh.mDevice)), mArgs(std::move(rh.mArgs)), mStream(std::move(rh.mStream))
         {
         }
 
         std::shared_ptr<SoapySDR::Device> mDevice;
         const SoapySDR::Kwargs mArgs;
-        volatile std::atomic_bool mStopStreamFlag;
+        std::unique_ptr<device_stream::CDeviceStreamRtl> mStream;
     };
 
     struct CDeviceManagerRtl::Impl
     {
-        const DeviceData *GetDeviceData(const int deviceNumber) const;
+        DeviceData *GetDeviceData(const int deviceNumber);
 
         std::vector<DeviceData> mDeviceStorage;
         std::mutex mLock;
     };
 
-    const DeviceData *CDeviceManagerRtl::Impl::GetDeviceData(const int deviceNumber) const
+    DeviceData *CDeviceManagerRtl::Impl::GetDeviceData(const int deviceNumber)
     {
         static constexpr auto kMinDevNumber = 1;
 
@@ -59,7 +62,10 @@ namespace device_manager
 
     CDeviceManagerRtl &CDeviceManagerRtl::operator=(CDeviceManagerRtl &&) = default;
 
-    CDeviceManagerRtl::~CDeviceManagerRtl() = default;
+    CDeviceManagerRtl::~CDeviceManagerRtl()
+    {
+        LOG_FUNC();
+    }
 
     bool CDeviceManagerRtl::DeviceSearch()
     {
@@ -141,22 +147,33 @@ namespace device_manager
     }
 
     bool CDeviceManagerRtl::StartStream(
-        [[maybe_unused]] const int deviceNumber,
-        [[maybe_unused]] const int direction,
-        [[maybe_unused]] const std::string &format,
-        [[maybe_unused]] const std::vector<size_t> &channels,
-        [[maybe_unused]] const SoapySDR::Kwargs &args)
+        const int deviceNumber,
+        const int direction,
+        const std::string &format,
+        const std::vector<size_t> &channels,
+        const SoapySDR::Kwargs &args)
     {
         LOG_FUNC();
+
+        if (auto deviceData = CallThreadSafe(mImpl->mLock, mImpl.get(), &CDeviceManagerRtl::Impl::GetDeviceData, deviceNumber))
+        {
+            auto &stream = deviceData->mStream;
+
+            stream = std::make_unique<device_stream::CDeviceStreamRtl>();
+
+            stream->RunStreamLoop(deviceData->mDevice, direction, format, channels, args);
+
+            return true;
+        }
 
         return false;
     }
 
-    bool CDeviceManagerRtl::StopStream(const int deviceNumber)
+    void CDeviceManagerRtl::StopStreams()
     {
         LOG_FUNC();
-        (void)(deviceNumber);
-        return false;
+
+        streamLoopDone = true;
     }
 
     std::size_t CDeviceManagerRtl::GetCountDevice() const

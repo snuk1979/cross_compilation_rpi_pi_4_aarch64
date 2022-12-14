@@ -87,6 +87,11 @@ RUN mkdir -p /home/$USERNAME/.vscode-server/extensions /home/$USERNAME/.vscode-s
 
 # RUN chown -R $USERNAME ${FIX_PATH}/kraken_sdr_commandhistory
 
+# *****************************************************
+# Important: It is necessary to avoid the error: increase the allowed size of the usbfs buffer with the following command
+# RUN sudo sh -c 'echo 0 > /sys/module/usbcore/parameters/usbfs_memory_mb'
+# *****************************************************
+
 ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8

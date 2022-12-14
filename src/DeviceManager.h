@@ -89,10 +89,9 @@ namespace device_manager
             const std::vector<size_t> &channels = std::vector<size_t>(),
             const SoapySDR::Kwargs &args = SoapySDR::Kwargs()) = 0;
         /**
-         * @brief Shutdown the stream
-         * @param deviceNumber number device
+         * @brief Shutdown all streams
          */
-        virtual bool StopStream(const int deviceNumber = 0) = 0;
+        virtual void StopStreams() = 0;
         /**
          * @brief Returns the number of devices created of the
          * DeviceSearch function
