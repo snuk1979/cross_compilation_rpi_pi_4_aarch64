@@ -1,33 +1,32 @@
 #ifndef __DEVICE_STREAM_H__
 #define __DEVICE_STREAM_H__
 
-#include <memory>
-#include <vector>
-#include <string>
-
 #include <SoapySDR/Types.hpp>
+#include <memory>
+#include <string>
+#include <vector>
 
-namespace SoapySDR
-{
-    class Device;
-    class Stream;
-} // namespace SoapySDR
+#include "DataQueue.h"
 
-namespace device_stream
-{
-    class IDeviceStream
-    {
-    public:
-        virtual void RunStreamLoop(
-            std::shared_ptr<SoapySDR::Device> device,
-            const int direction,
-            const std::string &format,
-            const std::vector<size_t> &channels = std::vector<size_t>(),
-            const SoapySDR::Kwargs &args = SoapySDR::Kwargs()) = 0;
+namespace SoapySDR {
+class Device;
+class Stream;
+}  // namespace SoapySDR
 
-        virtual ~IDeviceStream(){};
-    };
+namespace device_stream {
+class IDeviceStream {
+ public:
+  virtual void RunStreamLoop(
+      data_queue::RawQueue& dataQueue,
+      std::shared_ptr<SoapySDR::Device> device,
+      const int direction,
+      const std::string& format,
+      const std::vector<size_t>& channels = std::vector<size_t>(),
+      const SoapySDR::Kwargs& args = SoapySDR::Kwargs()) = 0;
 
-} // namespace device_stream
+  virtual ~IDeviceStream(){};
+};
 
-#endif // __DEVICE_STREAM_H__
+}  // namespace device_stream
+
+#endif  // __DEVICE_STREAM_H__
