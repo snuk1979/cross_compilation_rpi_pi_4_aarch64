@@ -19,16 +19,16 @@ class IDeviceManager {
   virtual bool DeviceSearch() = 0;
   /**
    * @brief Set the baseband sample rate of the chain.
+   * @param rate the sample rate in samples per second
    * @param deviceNumber number device
    * @param direction the channel direction RX or TX
    * @param channel an available channel on the device
-   * @param rate the sample rate in samples per second
    * @return true on success, otherwise false
    */
-  virtual bool SetSampleRate(const int deviceNumber = 0,
+  virtual bool SetSampleRate(const double rate = kMinSampleRate,
+                             const int deviceNumber = 0,
                              const int direction = SOAPY_SDR_RX,
-                             const size_t channel = 0u,
-                             const double rate = kMinSampleRate) = 0;
+                             const size_t channel = 0u) = 0;
   /**
    * @brief Tune the center frequency of the specified element.
    *  - For RX, this specifies the down-conversion frequency.
@@ -38,19 +38,19 @@ class IDeviceManager {
    *  - "CORR" - freq error correction in PPM
    *  - "RF" - frequency of the RF frontend
    *  - "BB" - frequency of the baseband DSP
+   * @param frequency the center frequency in Hz
    * @param deviceNumber number device
    * @param direction the channel direction RX or TX
    * @param channel an available channel on the device
    * @param name the name of a tunable element
-   * @param frequency the center frequency in Hz
    * @param args optional tuner arguments
    * @return true on success, otherwise false
    */
   virtual bool SetFrequency(
+      const double value = kDefFrequency,
       const int deviceNumber = 0,
       const int direction = SOAPY_SDR_RX,
       const size_t channel = 0u,
-      const double value = kDefFrequency,
       const SoapySDR::Kwargs& args = SoapySDR::Kwargs()) = 0;
   /**
    * @brief Setup, activate a stream, and start receiving data

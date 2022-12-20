@@ -105,10 +105,10 @@ bool CDeviceManagerRtl::DeviceSearch() {
          CallThreadSafe(mImpl->mLock, this, &CDeviceManagerRtl::GetCountDevice);
 }
 
-bool CDeviceManagerRtl::SetSampleRate(const int deviceNumber,
+bool CDeviceManagerRtl::SetSampleRate(const double rate,
+                                      const int deviceNumber,
                                       const int direction,
-                                      const size_t channel,
-                                      const double rate) {
+                                      const size_t channel) {
   LOG_FUNC();
 
   if (auto device = CallThreadSafe(
@@ -147,10 +147,10 @@ bool CDeviceManagerRtl::SetSampleRate(const int deviceNumber,
 }
 
 bool CDeviceManagerRtl::SetFrequency(
+    const double value,
     const int deviceNumber,
     const int direction,
     const size_t channel,
-    const double value,
     [[maybe_unused]] const SoapySDR::Kwargs& args) {
   LOG_FUNC();
 

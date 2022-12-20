@@ -26,6 +26,7 @@ style_check() {
 if [ "$1" = "--fix" ]
 then
   for FILE_NAME in $FILTER; do style_fix $FILE_NAME; done
+  command git status
 else
   PASSED=0
   for FILE_NAME in $FILTER; do

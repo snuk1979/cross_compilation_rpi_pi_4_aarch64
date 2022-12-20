@@ -20,15 +20,15 @@ class CDeviceManagerRtl : public IDeviceManager {
 
   bool DeviceSearch() override;
 
-  bool SetSampleRate(const int deviceNumber = 1,
+  bool SetSampleRate(const double rate = kMinSampleRate,
+                     const int deviceNumber = 1,
                      const int direction = SOAPY_SDR_RX,
-                     const size_t channel = 0u,
-                     const double rate = kMinSampleRate) override;
+                     const size_t channel = 0u) override;
 
-  bool SetFrequency(const int deviceNumber = 1,
+  bool SetFrequency(const double value = kDefFrequency,
+                    const int deviceNumber = 1,
                     const int direction = SOAPY_SDR_RX,
                     const size_t channel = 0u,
-                    const double value = kDefFrequency,
                     const SoapySDR::Kwargs& args = SoapySDR::Kwargs()) override;
 
   bool StartStream(const int deviceNumber = 1,
