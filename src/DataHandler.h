@@ -7,17 +7,17 @@
 
 namespace data_handler {
 class CDataHandler {
- public:
-  CDataHandler();
-  CDataHandler(CDataHandler&&);
-  ~CDataHandler();
+   public:
+    CDataHandler();
+    CDataHandler(CDataHandler&&);
+    ~CDataHandler();
 
-  void StartHandling() const;
-  data_queue::RawQueue& GetQueue() const;
+    void StartHandling() const;
+    data_queue::RawQueue& GetQueue() const;
 
- private:
-  struct Impl;
-  std::unique_ptr<Impl> mImpl;
+   private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace data_handler

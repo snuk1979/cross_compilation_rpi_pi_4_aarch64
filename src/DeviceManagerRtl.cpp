@@ -19,59 +19,59 @@ namespace device_manager {
 constexpr auto kDeviceIdent = "serial";
 
 struct DeviceData {
-  DeviceData(std::shared_ptr<SoapySDR::Device> device,
-             const SoapySDR::Kwargs& args)
-      : mDevice(std::move(device)), mArgs(args), mStream(), mDataHandler() {}
+    DeviceData(std::shared_ptr<SoapySDR::Device> device,
+               const SoapySDR::Kwargs& args)
+        : mDevice(std::move(device)), mArgs(args), mStream(), mDataHandler() {}
 
-  DeviceData(DeviceData&& rh)
-      : mDevice(std::move(rh.mDevice))
-      , mArgs(std::move(rh.mArgs))
-      , mStream(std::move(rh.mStream))
-      , mDataHandler(std::move(rh.mDataHandler)) {}
+    DeviceData(DeviceData&& rh)
+        : mDevice(std::move(rh.mDevice))
+        , mArgs(std::move(rh.mArgs))
+        , mStream(std::move(rh.mStream))
+        , mDataHandler(std::move(rh.mDataHandler)) {}
 
-  std::shared_ptr<SoapySDR::Device> mDevice;
-  const SoapySDR::Kwargs mArgs;
-  std::unique_ptr<device_stream::CDeviceStreamRtl> mStream;
-  data_handler::CDataHandler mDataHandler;
+    std::shared_ptr<SoapySDR::Device> mDevice;
+    const SoapySDR::Kwargs mArgs;
+    std::unique_ptr<device_stream::CDeviceStreamRtl> mStream;
+    data_handler::CDataHandler mDataHandler;
 };
 
 struct CDeviceManagerRtl::Impl {
-  ~Impl() {
-    LOG_FUNC();
+    ~Impl() {
+        LOG_FUNC();
 
-    ShutdownQueues();
-  }
+        ShutdownQueues();
+    }
 
-  DeviceData* GetDeviceData(const int deviceNumber);
-  void ShutdownQueues();
+    DeviceData* GetDeviceData(const int deviceNumber);
+    void ShutdownQueues();
 
-  std::vector<DeviceData> mDeviceStorage;
-  std::mutex mLock;
+    std::vector<DeviceData> mDeviceStorage;
+    std::mutex mLock;
 };
 
 DeviceData* CDeviceManagerRtl::Impl::GetDeviceData(const int deviceNumber) {
-  static constexpr auto kMinDevNumber = 1;
+    static constexpr auto kMinDevNumber = 1;
 
-  if (kMinDevNumber > deviceNumber ||
-      static_cast<std::size_t>(deviceNumber) > mDeviceStorage.size()) {
-    SoapySDR::logf(SOAPY_SDR_ERROR,
-                   " Device number not valid, valid range: %d - %u",
-                   kMinDevNumber,
-                   mDeviceStorage.size());
-    return nullptr;
-  }
+    if (kMinDevNumber > deviceNumber ||
+        static_cast<std::size_t>(deviceNumber) > mDeviceStorage.size()) {
+        SoapySDR::logf(SOAPY_SDR_ERROR,
+                       " Device number not valid, valid range: %d - %u",
+                       kMinDevNumber,
+                       mDeviceStorage.size());
+        return nullptr;
+    }
 
-  return &mDeviceStorage[deviceNumber - 1];
+    return &mDeviceStorage[deviceNumber - 1];
 }
 
 void CDeviceManagerRtl::Impl::ShutdownQueues() {
-  for (const auto& deviceData : mDeviceStorage) {
-    deviceData.mDataHandler.GetQueue().StopQueue();
-  }
+    for (const auto& deviceData : mDeviceStorage) {
+        deviceData.mDataHandler.GetQueue().StopQueue();
+    }
 }
 
 CDeviceManagerRtl::CDeviceManagerRtl() : mImpl(new CDeviceManagerRtl::Impl) {
-  LOG_FUNC();
+    LOG_FUNC();
 }
 
 CDeviceManagerRtl::CDeviceManagerRtl(CDeviceManagerRtl&&) = default;
@@ -79,71 +79,72 @@ CDeviceManagerRtl::CDeviceManagerRtl(CDeviceManagerRtl&&) = default;
 CDeviceManagerRtl& CDeviceManagerRtl::operator=(CDeviceManagerRtl&&) = default;
 
 CDeviceManagerRtl::~CDeviceManagerRtl() {
-  LOG_FUNC();
+    LOG_FUNC();
 }
 
 bool CDeviceManagerRtl::DeviceSearch() {
-  LOG_FUNC();
+    LOG_FUNC();
 
-  // 0. enumerate devices (list all devices' information)
-  const auto devicesArgsList = SoapySDR::Device::enumerate();
+    // 0. enumerate devices (list all devices' information)
+    const auto devicesArgsList = SoapySDR::Device::enumerate();
 
-  if (devicesArgsList.empty()) {
-    SoapySDR::logf(SOAPY_SDR_ERROR, "Devices aren't found, no work to do");
-    return false;
-  }
+    if (devicesArgsList.empty()) {
+        SoapySDR::logf(SOAPY_SDR_ERROR, "Devices aren't found, no work to do");
+        return false;
+    }
 
-  SoapySDR::logf(SOAPY_SDR_INFO,
-                 "**** Number of devices found: %u ****",
-                 devicesArgsList.size());
+    SoapySDR::logf(SOAPY_SDR_INFO,
+                   "**** Number of devices found: %u ****",
+                   devicesArgsList.size());
 
-  for (const auto& args : devicesArgsList) {
-    CallThreadSafe(mImpl->mLock, this, &CDeviceManagerRtl::AddDevice, args);
-  }
+    for (const auto& args : devicesArgsList) {
+        CallThreadSafe(mImpl->mLock, this, &CDeviceManagerRtl::AddDevice, args);
+    }
 
-  return 0u !=
-         CallThreadSafe(mImpl->mLock, this, &CDeviceManagerRtl::GetCountDevice);
+    return 0u != CallThreadSafe(
+                     mImpl->mLock, this, &CDeviceManagerRtl::GetCountDevice);
 }
 
 bool CDeviceManagerRtl::SetSampleRate(const double rate,
                                       const int deviceNumber,
                                       const int direction,
                                       const size_t channel) {
-  LOG_FUNC();
+    LOG_FUNC();
 
-  if (auto device = CallThreadSafe(
-          mImpl->mLock, this, &CDeviceManagerRtl::GetDevice, deviceNumber)) {
-    try {
-      auto minSampleRate = rate;
+    if (auto device = CallThreadSafe(
+            mImpl->mLock, this, &CDeviceManagerRtl::GetDevice, deviceNumber)) {
+        try {
+            auto minSampleRate = rate;
 
-      const auto sampleRateRange =
-          device->getSampleRateRange(direction, channel);
-      for (const auto& range : sampleRateRange) {
-        SoapySDR::logf(
-            SOAPY_SDR_INFO,
-            "Direction: %d Channel: %u minimum: %f maximum: %f step: %f",
-            direction,
-            channel,
-            range.minimum(),
-            range.maximum(),
-            range.step());
+            const auto sampleRateRange =
+                device->getSampleRateRange(direction, channel);
+            for (const auto& range : sampleRateRange) {
+                SoapySDR::logf(SOAPY_SDR_INFO,
+                               "Direction: %d Channel: %u minimum: %f maximum: "
+                               "%f step: %f",
+                               direction,
+                               channel,
+                               range.minimum(),
+                               range.maximum(),
+                               range.step());
 
-        minSampleRate =
-            range.maximum() < minSampleRate ? range.maximum() : minSampleRate;
-      }
+                minSampleRate = range.maximum() < minSampleRate
+                                    ? range.maximum()
+                                    : minSampleRate;
+            }
 
-      SoapySDR::logf(
-          SOAPY_SDR_INFO, "Setting sample rate to %f", minSampleRate);
+            SoapySDR::logf(
+                SOAPY_SDR_INFO, "Setting sample rate to %f", minSampleRate);
 
-      device->setSampleRate(direction, channel, minSampleRate);
+            device->setSampleRate(direction, channel, minSampleRate);
 
-      return true;
-    } catch (const std::runtime_error& error) {
-      SoapySDR::logf(SOAPY_SDR_ERROR, ": %s", error.what());
+            return true;
+        } catch (const std::runtime_error& error) {
+            SoapySDR::logf(SOAPY_SDR_ERROR, ": %s", error.what());
+        }
     }
-  }
 
-  return false;
+    return false;
 }
 
 bool CDeviceManagerRtl::SetFrequency(
@@ -152,15 +153,15 @@ bool CDeviceManagerRtl::SetFrequency(
     const int direction,
     const size_t channel,
     [[maybe_unused]] const SoapySDR::Kwargs& args) {
-  LOG_FUNC();
+    LOG_FUNC();
 
-  if (auto device = CallThreadSafe(
-          mImpl->mLock, this, &CDeviceManagerRtl::GetDevice, deviceNumber)) {
-    device->setFrequency(direction, channel, value);
-    return true;
-  }
+    if (auto device = CallThreadSafe(
+            mImpl->mLock, this, &CDeviceManagerRtl::GetDevice, deviceNumber)) {
+        device->setFrequency(direction, channel, value);
+        return true;
+    }
 
-  return false;
+    return false;
 }
 
 bool CDeviceManagerRtl::StartStream(const int deviceNumber,
@@ -168,156 +169,159 @@ bool CDeviceManagerRtl::StartStream(const int deviceNumber,
                                     const std::string& format,
                                     const std::vector<size_t>& channels,
                                     const SoapySDR::Kwargs& args) {
-  LOG_FUNC();
+    LOG_FUNC();
 
-  if (auto deviceData = CallThreadSafe(mImpl->mLock,
-                                       mImpl.get(),
-                                       &CDeviceManagerRtl::Impl::GetDeviceData,
-                                       deviceNumber)) {
-    auto& stream = deviceData->mStream;
+    if (auto deviceData =
+            CallThreadSafe(mImpl->mLock,
+                           mImpl.get(),
+                           &CDeviceManagerRtl::Impl::GetDeviceData,
+                           deviceNumber)) {
+        auto& stream = deviceData->mStream;
 
-    stream = std::make_unique<device_stream::CDeviceStreamRtl>();
+        stream = std::make_unique<device_stream::CDeviceStreamRtl>();
 
-    const auto& dataHandler = deviceData->mDataHandler;
+        const auto& dataHandler = deviceData->mDataHandler;
 
-    dataHandler.StartHandling();
+        dataHandler.StartHandling();
 
-    stream->RunStreamLoop(dataHandler.GetQueue(),
-                          deviceData->mDevice,
-                          direction,
-                          format,
-                          channels,
-                          args);
+        stream->RunStreamLoop(dataHandler.GetQueue(),
+                              deviceData->mDevice,
+                              direction,
+                              format,
+                              channels,
+                              args);
 
-    return true;
-  }
+        return true;
+    }
 
-  return false;
+    return false;
 }
 
 void CDeviceManagerRtl::StopStreams() {
-  LOG_FUNC();
+    LOG_FUNC();
 
-  streamLoopDone = true;
+    streamLoopDone = true;
 
-  mImpl->ShutdownQueues();
+    mImpl->ShutdownQueues();
 }
 
 void CDeviceManagerRtl::WaitShutdownSignal() {
-  LOG_FUNC();
+    LOG_FUNC();
 
-  while (not streamLoopDone) {
-    std::this_thread::yield();
-  }
+    while (not streamLoopDone) {
+        std::this_thread::yield();
+    }
 }
 
 std::size_t CDeviceManagerRtl::GetCountDevice() const {
-  return mImpl->mDeviceStorage.size();
+    return mImpl->mDeviceStorage.size();
 }
 
 SoapySDR::Kwargs CDeviceManagerRtl::GetHardwareInfo(
     const int deviceNumber) const {
-  if (const auto deviceData = mImpl->GetDeviceData(deviceNumber)) {
-    return deviceData->mArgs;
-  }
+    if (const auto deviceData = mImpl->GetDeviceData(deviceNumber)) {
+        return deviceData->mArgs;
+    }
 
-  return SoapySDR::Kwargs();
+    return SoapySDR::Kwargs();
 }
 
 void CDeviceManagerRtl::PrintDeviceInfo(const int deviceNumber) const {
-  SoapySDR::logf(SOAPY_SDR_NOTICE, "Device #%d: ", deviceNumber);
+    SoapySDR::logf(SOAPY_SDR_NOTICE, "Device #%d: ", deviceNumber);
 
-  auto args = CallThreadSafe(
-      mImpl->mLock, this, &CDeviceManagerRtl::GetHardwareInfo, deviceNumber);
+    auto args = CallThreadSafe(
+        mImpl->mLock, this, &CDeviceManagerRtl::GetHardwareInfo, deviceNumber);
 
-  if (!args.empty()) {
-    args.merge(
-        CallThreadSafe(
-            mImpl->mLock, this, &CDeviceManagerRtl::GetDevice, deviceNumber)
-            ->getHardwareInfo());
-  }
+    if (!args.empty()) {
+        args.merge(
+            CallThreadSafe(
+                mImpl->mLock, this, &CDeviceManagerRtl::GetDevice, deviceNumber)
+                ->getHardwareInfo());
+    }
 
-  for (const auto& info : args) {
-    SoapySDR::logf(
-        SOAPY_SDR_INFO, "%s = %s", info.first.c_str(), info.second.c_str());
-  }
+    for (const auto& info : args) {
+        SoapySDR::logf(
+            SOAPY_SDR_INFO, "%s = %s", info.first.c_str(), info.second.c_str());
+    }
 }
 
 void CDeviceManagerRtl::PrintDeviceSettings(const int deviceNumber) const {
-  const auto device = CallThreadSafe(
-      mImpl->mLock, this, &CDeviceManagerRtl::GetDevice, deviceNumber);
-  if (!device) {
-    return;
-  }
+    const auto device = CallThreadSafe(
+        mImpl->mLock, this, &CDeviceManagerRtl::GetDevice, deviceNumber);
+    if (!device) {
+        return;
+    }
 
-  //	1 antennas
-  auto strBuff = std::string("Rx antennas: ");
-  for (const auto& antennaName : device->listAntennas(SOAPY_SDR_RX, 0)) {
-    strBuff += antennaName + ",";
-  }
-  SoapySDR::logf(SOAPY_SDR_INFO, "%s", strBuff.c_str());
+    //	1 antennas
+    auto strBuff = std::string("Rx antennas: ");
+    for (const auto& antennaName : device->listAntennas(SOAPY_SDR_RX, 0)) {
+        strBuff += antennaName + ",";
+    }
+    SoapySDR::logf(SOAPY_SDR_INFO, "%s", strBuff.c_str());
 
-  //	1.1 gains
-  strBuff = "Rx Gains: ";
-  for (const auto& gainName : device->listGains(SOAPY_SDR_RX, 0)) {
-    strBuff += gainName + ", ";
-  }
-  SoapySDR::logf(SOAPY_SDR_INFO, "%s", strBuff.c_str());
+    //	1.1 gains
+    strBuff = "Rx Gains: ";
+    for (const auto& gainName : device->listGains(SOAPY_SDR_RX, 0)) {
+        strBuff += gainName + ", ";
+    }
+    SoapySDR::logf(SOAPY_SDR_INFO, "%s", strBuff.c_str());
 
-  //	1.2 ranges(frequency ranges)
-  strBuff = "Rx freq ranges: ";
-  for (const auto& freqRange : device->getFrequencyRange(SOAPY_SDR_RX, 0)) {
-    strBuff += "[" + std::to_string(freqRange.minimum()) + " Hz -> " +
-               std::to_string(freqRange.maximum()) + " Hz], ";
-  }
-  SoapySDR::logf(SOAPY_SDR_INFO, "%s", strBuff.c_str());
+    //	1.2 ranges(frequency ranges)
+    strBuff = "Rx freq ranges: ";
+    for (const auto& freqRange : device->getFrequencyRange(SOAPY_SDR_RX, 0)) {
+        strBuff += "[" + std::to_string(freqRange.minimum()) + " Hz -> " +
+                   std::to_string(freqRange.maximum()) + " Hz], ";
+    }
+    SoapySDR::logf(SOAPY_SDR_INFO, "%s", strBuff.c_str());
 }
 
 bool CDeviceManagerRtl::AddDevice(const SoapySDR::Kwargs& args) {
-  LOG_FUNC();
+    LOG_FUNC();
 
-  const auto it = args.find(kDeviceIdent);
+    const auto it = args.find(kDeviceIdent);
 
-  const auto deviceIdent = it != args.end() ? it->second : "Undifine";
+    const auto deviceIdent = it != args.end() ? it->second : "Undifine";
 
-  // Create device instance
+    // Create device instance
 
-  auto device = SoapySDR::Device::make(args);
+    auto device = SoapySDR::Device::make(args);
 
-  if (nullptr != device) {
-    auto deleter = [devIdent = deviceIdent](SoapySDR::Device* device) {
-      if (nullptr == device) {
-        SoapySDR::logf(SOAPY_SDR_NOTICE,
-                       "Unmake device: %s - pointer is nullptr",
-                       devIdent);
-        return;
-      }
+    if (nullptr != device) {
+        auto deleter = [devIdent = deviceIdent](SoapySDR::Device* device) {
+            if (nullptr == device) {
+                SoapySDR::logf(SOAPY_SDR_NOTICE,
+                               "Unmake device: %s - pointer is nullptr",
+                               devIdent);
+                return;
+            }
 
-      SoapySDR::logf(SOAPY_SDR_NOTICE, "Unmake device: %s", devIdent.c_str());
-      SoapySDR::Device::unmake(device);
-    };
+            SoapySDR::logf(
+                SOAPY_SDR_NOTICE, "Unmake device: %s", devIdent.c_str());
+            SoapySDR::Device::unmake(device);
+        };
 
-    SoapySDR::logf(SOAPY_SDR_NOTICE, "Device %s made", deviceIdent.c_str());
+        SoapySDR::logf(SOAPY_SDR_NOTICE, "Device %s made", deviceIdent.c_str());
 
-    mImpl->mDeviceStorage.emplace_back(
-        std::shared_ptr<SoapySDR::Device>(device, deleter), args);
+        mImpl->mDeviceStorage.emplace_back(
+            std::shared_ptr<SoapySDR::Device>(device, deleter), args);
 
-    return true;
-  }
+        return true;
+    }
 
-  SoapySDR::logf(
-      SOAPY_SDR_FATAL, "SoapySDR::Device::make %s failed", deviceIdent.c_str());
+    SoapySDR::logf(SOAPY_SDR_FATAL,
+                   "SoapySDR::Device::make %s failed",
+                   deviceIdent.c_str());
 
-  return false;
+    return false;
 }
 
 std::shared_ptr<SoapySDR::Device> CDeviceManagerRtl::GetDevice(
     const int deviceNumber) const {
-  if (const auto deviceData = mImpl->GetDeviceData(deviceNumber)) {
-    return deviceData->mDevice;
-  }
+    if (const auto deviceData = mImpl->GetDeviceData(deviceNumber)) {
+        return deviceData->mDevice;
+    }
 
-  return nullptr;
+    return nullptr;
 }
 
 }  // namespace device_manager

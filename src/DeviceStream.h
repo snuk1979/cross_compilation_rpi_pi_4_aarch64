@@ -15,16 +15,16 @@ class Stream;
 
 namespace device_stream {
 class IDeviceStream {
- public:
-  virtual void RunStreamLoop(
-      data_queue::RawQueue& dataQueue,
-      std::shared_ptr<SoapySDR::Device> device,
-      const int direction,
-      const std::string& format,
-      const std::vector<size_t>& channels = std::vector<size_t>(),
-      const SoapySDR::Kwargs& args = SoapySDR::Kwargs()) = 0;
+   public:
+    virtual void RunStreamLoop(
+        data_queue::RawQueue& dataQueue,
+        std::shared_ptr<SoapySDR::Device> device,
+        const int direction,
+        const std::string& format,
+        const std::vector<size_t>& channels = std::vector<size_t>(),
+        const SoapySDR::Kwargs& args = SoapySDR::Kwargs()) = 0;
 
-  virtual ~IDeviceStream(){};
+    virtual ~IDeviceStream(){};
 };
 
 }  // namespace device_stream

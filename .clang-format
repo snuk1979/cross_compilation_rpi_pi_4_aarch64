@@ -1,6 +1,6 @@
 ---
 Language: Cpp
-Standard: Cpp03
+Standard: Cpp11
 BasedOnStyle: Google
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: false
@@ -10,6 +10,7 @@ BinPackParameters: false
 BreakConstructorInitializersBeforeComma: true
 DerivePointerAlignment: false
 TabWidth: 2
+IndentWidth: 4
 # Force pointers to the type for C++.
 DerivePointerAlignment: false
 PointerAlignment: Left
