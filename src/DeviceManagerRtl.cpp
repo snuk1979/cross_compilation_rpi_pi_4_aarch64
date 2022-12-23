@@ -280,7 +280,8 @@ bool CDeviceManagerRtl::AddDevice(const SoapySDR::Kwargs& args) {
 
     const auto it = args.find(kDeviceIdent);
 
-    const auto deviceIdent = it != args.end() ? it->second : "Undifine";
+    const auto deviceIdent =
+        it != args.end() ? it->second : std::string("Undifine");
 
     // Create device instance
 
@@ -291,7 +292,7 @@ bool CDeviceManagerRtl::AddDevice(const SoapySDR::Kwargs& args) {
             if (nullptr == device) {
                 SoapySDR::logf(SOAPY_SDR_NOTICE,
                                "Unmake device: %s - pointer is nullptr",
-                               devIdent);
+                               devIdent.c_str());
                 return;
             }
 

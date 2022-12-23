@@ -52,6 +52,8 @@ RUN apt-get install -yf --no-install-recommends \
     liburiparser-dev \
     vim \
     curl
+
+ RUN apt-get install -y wget
    
  RUN pip3 install --upgrade pip
  RUN pip3 install --upgrade pip setuptools
@@ -91,6 +93,15 @@ RUN mkdir -p /home/$USERNAME/.vscode-server/extensions /home/$USERNAME/.vscode-s
 # Important: It is necessary to avoid the error: increase the allowed size of the usbfs buffer with the following command
 # RUN sudo sh -c 'echo 0 > /sys/module/usbcore/parameters/usbfs_memory_mb'
 # *****************************************************
+
+RUN cd /home/$USERNAME
+RUN wget https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+RUN tar -xvf ./clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+RUN rm ./clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+RUN mv ./clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-/ clang_12.0.1
+RUN mv clang_12.0.1 /usr/local
+RUN echo 'export PATH=/usr/local/clang_12.0.1/bin:$PATH' >> /home/$USERNAME/.bashrc
+RUN echo 'export LD_LIBRARY_PATH=/usr/local/clang_12.0.1/lib:$LD_LIBRARY_PATH' >> /home/$USERNAME/.bashrc
 
 ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8

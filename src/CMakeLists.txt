@@ -11,4 +11,5 @@ set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAK
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${SOAPY_SDR_INCLUDE_DIR})
 
-target_link_libraries(${PROJECT_NAME} SoapySDR)
+target_link_libraries(${PROJECT_NAME} SoapySDR kfr_dft kfr_io)
+
